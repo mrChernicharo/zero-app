@@ -60,16 +60,20 @@ export const permissions = definePermissions(schema, () => ({
   user: {
     row: {
       select: ANYONE_CAN,
+      insert: ANYONE_CAN,
     },
   },
   post: {
     row: {
       select: ANYONE_CAN,
+      insert: ANYONE_CAN,
+      delete: ANYONE_CAN,
     },
   },
   comment: {
     row: {
       select: ANYONE_CAN,
+      insert: ANYONE_CAN,
     },
   },
 }));
