@@ -5,8 +5,8 @@ import { useZero } from "./main";
 function App() {
   const z = useZero();
   const [users] = useQuery(z.query.user);
-  const [posts] = useQuery(z.query.post);
-  const [comments] = useQuery(z.query.comment);
+  const [posts] = useQuery(z.query.post.related("author"));
+  const [comments] = useQuery(z.query.comment.related("post").related("author"));
 
   console.log({ users, posts, comments });
 

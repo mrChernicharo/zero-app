@@ -26,7 +26,7 @@ const comment = table("comment")
   .primaryKey("id");
 
 const postRelationships = relationships(post, ({ one }) => ({
-  authorId: one({
+  author: one({
     sourceField: ["author_id"],
     destSchema: user,
     destField: ["id"],
@@ -34,12 +34,12 @@ const postRelationships = relationships(post, ({ one }) => ({
 }));
 
 const commentRelationships = relationships(comment, ({ one, many }) => ({
-  commentAuthorId: one({
+  author: one({
     sourceField: ["author_id"],
     destSchema: user,
     destField: ["id"],
   }),
-  postId: many({
+  post: many({
     sourceField: ["post_id"],
     destSchema: post,
     destField: ["id"],
