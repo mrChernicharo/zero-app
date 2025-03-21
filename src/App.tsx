@@ -11,6 +11,10 @@ const idMaker = (length = 12) =>
     .join("");
 
 export default function App() {
+  return <Home />;
+}
+
+export function Home() {
   const z = useZero();
   const [posts] = useQuery(z.query.post);
 
