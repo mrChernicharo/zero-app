@@ -60,6 +60,7 @@ export function Post({ postId }: { postId: string }) {
 
 export function Comment({ commentId }: { commentId: string }) {
   const z = useZero();
+
   const [comment] = useQuery(z.query.comment.where("id", commentId).one().related("author"));
 
   return (
