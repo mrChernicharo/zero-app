@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { FormEvent, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
@@ -48,8 +48,52 @@ function About() {
   return <div>about</div>;
 }
 
+const API_URL = "http://localhost:8900";
+export async function postFn(url: string, body: object) {
+  try {
+    const responseData = await fetch(`${API_URL}${url}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: [["Content-Type", "Application/json"]],
+    }).then((res) => res.json());
+
+    return { data: responseData, err: null };
+  } catch (error) {
+    console.log({ data: null, err: error });
+  }
+}
+
 function Login() {
-  return <div>login</div>;
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target as HTMLFormElement);
+
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    const data = await postFn("/api/login", { email, password });
+    console.log(data);
+
+    console.log({ email, password });
+  }
+
+  return (
+    <div>
+      login
+      <form onSubmit={onSubmit}>
+        <label htmlFor="email">
+          <input placeholder="email" type="email" name="email" id="email" />
+        </label>
+
+        <label htmlFor="password">
+          <input placeholder="password" type="password" name="password" id="password" />
+        </label>
+
+        <button>submit</button>
+      </form>
+    </div>
+  );
 }
 
 export const useZero = _useZero<Schema>;
