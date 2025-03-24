@@ -49,10 +49,12 @@ async function wait(ms: number) {
 app.post("/api/login", async (req, res) => {
   console.log("** login **", req.body);
 
-  await runQuery("SELECT * FROM users");
+  const { data } = await runQuery(`SELECT * FROM "user"`);
+  const { rows } = data;
 
   await wait(1000);
 
+  console.log(rows);
   console.log("ok!");
 
   res.json({ message: "ok" });
