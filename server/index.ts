@@ -24,8 +24,20 @@ interface User {
   email: string;
 }
 
+const whitelist = ["http://localhost:5176", "http://example2.com"];
+const corsOptionsDelegate = function (req, callback) {
+  let corsOptions;
+  if (whitelist.indexOf(req.header("Origin")) !== -1) {
+    corsOptions = { origin: true }; // reflect (enable) the requested origin in the CORS response
+  } else {
+    corsOptions = { origin: false }; // disable CORS for this request
+  }
+  callback(null, corsOptions); // callback expects two parameters: error and options
+};
+
 const app = express();
-app.use(cors());
+// app.use(cors());
+app.use(cors(corsOptionsDelegate));
 app.use(express.json());
 
 async function wait(ms: number) {
@@ -79,6 +91,7 @@ app.post("/api/login", async (req, res) => {
     const jwtPayload = {
       sub: existingUser.id,
       iat: Math.floor(Date.now() / 1000),
+      exp: Date.now() + THIRTY_DAYS,
     };
 
     const jwt = await new SignJWT(jwtPayload)
@@ -86,11 +99,9 @@ app.post("/api/login", async (req, res) => {
       .setExpirationTime("30days")
       .sign(new TextEncoder().encode(process.env.ZERO_AUTH_SECRET));
 
-    res.cookie("jwt", jwt, {
-      expires: new Date(Date.now() + THIRTY_DAYS),
-    });
+    res.header("Jwt", jwt);
 
-    res.json({ data, err });
+    res.json({ data: jwt, err });
   } catch (err) {
     console.error("/api/login ERROR:", err);
     res.json({ data: null, err });
