@@ -4,14 +4,21 @@ import "./index.css";
 import App from "./App.tsx";
 import { useZero as _useZero, ZeroProvider } from "@rocicorp/zero/react";
 import { Zero } from "@rocicorp/zero";
-import { Schema, schema } from "../schema.ts";
+import { Schema, schema, User } from "../schema.ts";
 import { BrowserRouter, Routes, Route, Outlet, Link } from "react-router";
+import Cookie from "js-cookie";
+import { decodeJwt } from "jose";
+
+const encodedJWT = Cookie.get("jwt");
+const decodedJWT = encodedJWT && decodeJwt(encodedJWT);
+const userID = decodedJWT?.sub ? (decodedJWT.sub as string) : "unknown";
+console.log({ userID });
 
 const z = new Zero({
   userID: "test-user",
   schema,
   server: import.meta.env.VITE_PUBLIC_SERVER,
-  // auth
+  auth: () => encodedJWT,
   kvStore: "idb",
 });
 
@@ -49,17 +56,20 @@ function About() {
 }
 
 const API_URL = "http://localhost:8900";
-export async function postFn(url: string, body: object) {
+export async function postFn<T>(url: string, body: object) {
   try {
     const responseData = await fetch(`${API_URL}${url}`, {
       method: "POST",
       body: JSON.stringify(body),
       headers: [["Content-Type", "Application/json"]],
-    }).then((res) => res.json());
-
-    return { data: responseData, err: null };
+    }).then((res) => {
+      res.headers.forEach(console.log);
+      return res.json();
+    });
+    console.log("responseData", responseData);
+    return responseData as { data: T[]; err: null };
   } catch (error) {
-    console.log({ data: null, err: error });
+    return { data: null, err: error };
   }
 }
 
@@ -72,10 +82,13 @@ function Login() {
     const email = formData.get("email");
     const password = formData.get("password");
 
-    const data = await postFn("/api/login", { email, password });
-    console.log(data);
+    const { data } = await postFn<User>("/api/login", { email, password });
 
-    console.log({ email, password });
+    const existingUser = data?.[0] || null;
+
+    console.log(existingUser);
+
+    console.log({ email, password, existingUser, data });
   }
 
   return (

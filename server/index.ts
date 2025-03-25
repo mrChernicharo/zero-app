@@ -10,35 +10,23 @@ import express from "express";
 import type { Request, Response } from "express";
 import pg from "pg";
 import { config } from "dotenv";
+import { SignJWT } from "jose";
 config();
+
+const PORT = 8900;
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 const { Client: PGClient } = pg;
 
-const PORT = 8900;
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-app.get("/api/", (req: Request, res: Response) => {
-  //   const jwtPayload = {
-  //     sub: userIDs[randomInt(userIDs.length)],
-  //     iat: Math.floor(Date.now() / 1000),
-  //   };
-
-  //   const jwt = await new SignJWT(jwtPayload)
-  //     .setProtectedHeader({ alg: "HS256" })
-  //     .setExpirationTime("30days")
-  //     .sign(new TextEncoder().encode(must(process.env.ZERO_AUTH_SECRET)));
-
-  //   setCookie(c, "jwt", jwt, {
-  //     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  //   });
-
-  console.log("test");
-
-  res.send("test ok!");
-});
 
 async function wait(ms: number) {
   return new Promise((resolve) => {
@@ -46,18 +34,67 @@ async function wait(ms: number) {
   });
 }
 
+async function dbRun<T>(query: string, args: (string | number)[] = []) {
+  const db = new PGClient({
+    host: process.env.PGHOST_DEV,
+    port: Number(process.env.PGPORT_DEV),
+    user: process.env.PGUSER_DEV,
+    password: process.env.PGPASSWORD_DEV,
+    database: process.env.PGDATABASE_DEV,
+  });
+
+  try {
+    await db.connect();
+    const result = await db.query(query, args);
+
+    const { rows } = result;
+
+    return { data: rows as T[], err: null };
+  } catch (error) {
+    console.error(`<runQuery ERROR>`, error);
+
+    return { data: null, err: error };
+  } finally {
+    db.end();
+  }
+}
+
+app.get("/api/", (req: Request, res: Response) => {
+  console.log("test");
+  res.send("test ok!");
+});
+
 app.post("/api/login", async (req, res) => {
-  console.log("** login **", req.body);
+  try {
+    console.log("** login **", req.body);
 
-  const { data } = await runQuery(`SELECT * FROM "user"`);
-  const { rows } = data;
+    const { data, err } = await dbRun<User>(`SELECT * FROM "user" WHERE email = $1`, [req.body.email]);
 
-  await wait(1000);
+    await wait(100);
 
-  console.log(rows);
-  console.log("ok!");
+    const existingUser = data?.[0] as User;
 
-  res.json({ message: "ok" });
+    console.log("existing user", existingUser);
+
+    const jwtPayload = {
+      sub: existingUser.id,
+      iat: Math.floor(Date.now() / 1000),
+    };
+
+    const jwt = await new SignJWT(jwtPayload)
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("30days")
+      .sign(new TextEncoder().encode(process.env.ZERO_AUTH_SECRET));
+
+    res.cookie("jwt", jwt, {
+      expires: new Date(Date.now() + THIRTY_DAYS),
+    });
+
+    res.json({ data, err });
+  } catch (err) {
+    console.error("/api/login ERROR:", err);
+    res.json({ data: null, err });
+  }
 });
 
 app.listen(PORT, () => {
@@ -68,33 +105,10 @@ app.listen(PORT, () => {
 //   return Math.floor(Math.random() * max);
 // }
 
-// function must<T>(val: T) {
-//   if (!val) {
-//     throw new Error("Expected value to be defined");
-//   }
-//   return val;
-// }
-
-const db = new PGClient({
-  host: process.env.PGHOST_DEV,
-  port: Number(process.env.PGPORT_DEV),
-  user: process.env.PGUSER_DEV,
-  password: process.env.PGPASSWORD_DEV,
-  database: process.env.PGDATABASE_DEV,
-});
-
-async function runQuery<T>(query: string, args: (string | number)[] = []) {
-  await db.connect();
-  let data: T | null = null,
-    err = null;
-  try {
-    data = (await db.query(query, [...args])) as T;
-  } catch (error) {
-    console.error("<runQuery>", error);
-    err = error;
-  } finally {
-    await db.end();
-  }
-
-  return { data, err };
-}
+// const db = new PGClient({
+//   host: process.env.PGHOST_DEV,
+//   port: Number(process.env.PGPORT_DEV),
+//   user: process.env.PGUSER_DEV,
+//   password: process.env.PGPASSWORD_DEV,
+//   database: process.env.PGDATABASE_DEV,
+// });

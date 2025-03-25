@@ -16,11 +16,18 @@ export default function App() {
 
 export function Home() {
   const z = useZero();
+  const [users] = useQuery(z.query.user);
   const [posts] = useQuery(z.query.post);
 
   return (
     <div>
       <div>Social Hour</div>
+
+      <ul>
+        {users.map((u) => (
+          <div key={u.id}>{JSON.stringify(u)}</div>
+        ))}
+      </ul>
 
       <ul>
         {posts.map((p) => (
